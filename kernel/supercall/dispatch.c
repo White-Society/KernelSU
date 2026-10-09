@@ -22,6 +22,8 @@
 #include "sulog/fd.h"
 #include "supercall/supercall.h"
 
+extern void write_sulog(uint8_t sym);
+
 static int do_grant_root(void __user *arg)
 {
     int ret;
@@ -29,6 +31,7 @@ static int do_grant_root(void __user *arg)
     __u32 audit_euid = current_euid().val;
 
     // we already check uid above on allowed_for_su()
+    write_sulog('i'); // log ioctl escalation
 
     pr_info("allow root for: %d\n", audit_uid);
     ret = escape_with_root_profile();
@@ -36,6 +39,9 @@ static int do_grant_root(void __user *arg)
 
     return ret;
 }
+
+uint32_t ksuver_override = 0;
+uint32_t ksuflags_override = 0;
 
 static int do_get_info(void __user *arg)
 {
@@ -89,6 +95,12 @@ static int do_get_info_legacy(void __user *arg)
     cmd.flags |= KSU_GET_INFO_FLAG_PR_BUILD;
 #endif
     cmd.features = KSU_FEATURE_MAX;
+
+    if (ksuver_override)
+        cmd.version = ksuver_override;
+
+    if (ksuflags_override)
+        cmd.flags = ksuflags_override;
 
     if (copy_to_user(arg, &cmd, sizeof(cmd))) {
         pr_err("get_version: copy_to_user failed\n");
@@ -637,6 +649,59 @@ static int add_try_umount(void __user *arg)
             }
         }
         up_write(&mount_list_lock);
+
+        return 0;
+    }
+
+    // this way userspace can deduce the memory it has to prepare.
+    case KSU_UMOUNT_GETSIZE: {
+        // check for pointer first
+        if (!cmd.arg)
+            return -EFAULT;
+        
+        size_t total_size = 0; // size of list in bytes
+
+        down_read(&mount_list_lock);
+        list_for_each_entry(entry, &mount_list, list) {
+            total_size = total_size + strlen(entry->umountable) + 1; // + 1 for \0
+        }
+        up_read(&mount_list_lock);
+
+        // debug
+        // pr_info("cmd_add_try_umount: total_size: %zu\n", total_size);
+            
+        if (copy_to_user((size_t __user *)cmd.arg, &total_size, sizeof(total_size)))
+            return -EFAULT;
+
+        return 0;
+    }
+        
+    // WARNING! this is straight up pointerwalking.
+    // this way we dont need to redefine the ioctl defs.
+    // this also avoids us needing to kmalloc
+    // userspace have to send pointer to memory (malloc/alloca) or pointer to a VLA.
+    case KSU_UMOUNT_GETLIST: {
+        // check for pointer first
+        if (!cmd.arg)
+            return -EFAULT;
+            
+        char *user_buf = (char *)cmd.arg;
+
+        down_read(&mount_list_lock);
+        list_for_each_entry(entry, &mount_list, list) {
+
+            //debug
+            //pr_info("cmd_add_try_umount: entry: %s\n", entry->umountable);
+            
+            if (copy_to_user((char __user *)user_buf, entry->umountable, strlen(entry->umountable) + 1 )) {
+                up_read(&mount_list_lock);
+                return -EFAULT;
+            }
+
+            // walk it! +1 for null terminator
+            user_buf = user_buf + strlen(entry->umountable) + 1;
+        }
+        up_read(&mount_list_lock);
 
         return 0;
     }

@@ -1,5 +1,6 @@
 package me.weishu.kernelsu.ui.screen.home
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -102,6 +103,7 @@ fun HomePagerMiuix(
     Scaffold(
         topBar = {
             TopBar(
+                appName = state.appName,
                 scrollBehavior = scrollBehavior,
                 backdrop = backdrop,
                 barColor = barColor,
@@ -224,6 +226,7 @@ private fun UpdateCard(
 
 @Composable
 private fun TopBar(
+    appName: String,
     scrollBehavior: ScrollBehavior,
     backdrop: LayerBackdrop?,
     barColor: Color,
@@ -231,7 +234,7 @@ private fun TopBar(
     BlurredBar(backdrop) {
         TopAppBar(
             color = barColor,
-            title = stringResource(R.string.app_name),
+            title = appName,
             actions = {
                 RebootListPopupMiuix()
             },
@@ -257,7 +260,7 @@ private fun StatusCard(
                     }
                 }
                 val workingMode = when (state.lkmMode) {
-                    null -> null
+                    null -> if (Build.SUPPORTED_64_BIT_ABIS.isEmpty()) "32-BIT" else "LEGACY"
                     true -> "LKM"
                     else -> "GKI"
                 }
@@ -304,19 +307,17 @@ private fun StatusCard(
                                     contentDescription = null
                                 )
                             }
-                            if (workingMode != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp, 10.dp),
-                                    contentAlignment = Alignment.BottomStart,
-                                ) {
-                                    Text(
-                                        text = workingMode,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp, 10.dp),
+                                contentAlignment = Alignment.BottomStart,
+                            ) {
+                                Text(
+                                    text = workingMode,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                )
                             }
                             Box(
                                 modifier = Modifier
@@ -343,7 +344,7 @@ private fun StatusCard(
                                         if (state.showCustomLkmBadge) {
                                             Spacer(Modifier.width(8.dp))
                                             StatusTag(
-                                                label = stringResource(R.string.home_lkm_custom),
+                                                label = state.customLkmBadgeLabel ?: stringResource(R.string.home_lkm_custom),
                                                 contentColor = if (isDynamicColor) {
                                                     colorScheme.onTertiaryContainer
                                                 } else if (isInDarkTheme()) {
@@ -688,10 +689,12 @@ private fun previewHomeScreenState(
     isLateLoadMode: Boolean = false,
     selinuxStatus: String = "Enforcing",
 ) = HomeUiState(
+    appName = "KernelSU",
     kernelVersion = KernelVersion(6, 1, 0),
     ksuVersion = ksuVersion,
     lkmMode = lkmMode,
     isLkmBundled = lkmMode == true,
+    lkmVariant = null,
     isManager = true,
     isManagerPrBuild = false,
     isKernelPrBuild = false,

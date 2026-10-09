@@ -17,6 +17,8 @@ import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Adb
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ContactPage
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DeveloperMode
@@ -24,6 +26,10 @@ import androidx.compose.material.icons.filled.DisplaySettings
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LayersClear
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.ElectricalServices
+import androidx.compose.material.icons.filled.Fence
+import androidx.compose.material.icons.filled.FolderDelete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Security
@@ -97,15 +103,15 @@ fun SettingPagerMaterial(
                 SegmentedColumn(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
                     content = listOf(
-                        {
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.SystemUpdate,
-                                title = stringResource(id = R.string.settings_check_update),
-                                summary = stringResource(id = R.string.settings_check_update_summary),
-                                checked = uiState.checkUpdate,
-                                onCheckedChange = actions.onSetCheckUpdate
-                            )
-                        },
+//                        {
+//                            SegmentedSwitchItem(
+//                                icon = Icons.Filled.SystemUpdate,
+//                                title = stringResource(id = R.string.settings_check_update),
+//                                summary = stringResource(id = R.string.settings_check_update_summary),
+//                                checked = uiState.checkUpdate,
+//                                onCheckedChange = actions.onSetCheckUpdate
+//                            )
+//                        },
                         {
                             SegmentedSwitchItem(
                                 icon = Icons.Filled.SystemUpdateAlt,
@@ -166,6 +172,56 @@ fun SettingPagerMaterial(
                                 )
                             }
                         )
+                    }
+                )
+            }
+
+            if (uiState.isToolkitInstalled || uiState.isKpatchNextInstalled) KsuIsValid {
+                SegmentedColumn(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
+                    content = buildList {
+                        if (uiState.isToolkitInstalled) add {
+                            SegmentedListItem(
+                                onClick = {
+                                    actions.onOpenWebUi("ksu_toolkit", "KernelSU Toolkit")
+                                },
+                                headlineContent = { Text(stringResource(R.string.settings_kernelsu_toolkit)) },
+                                supportingContent = { Text(stringResource(R.string.settings_kernelsu_toolkit_summary)) },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Filled.Build,
+                                        stringResource(R.string.settings_kernelsu_toolkit)
+                                    )
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        null
+                                    )
+                                }
+                            )
+                        }
+                        if (uiState.isKpatchNextInstalled) add {
+                            SegmentedListItem(
+                                onClick = {
+                                    actions.onOpenWebUi("KPatch-Next", "KPatch-Next")
+                                },
+                                headlineContent = { Text(stringResource(R.string.settings_kpatch_next)) },
+                                supportingContent = { Text(stringResource(R.string.settings_kpatch_next_summary)) },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Filled.Build,
+                                        stringResource(R.string.settings_kpatch_next)
+                                    )
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        null
+                                    )
+                                }
+                            )
+                        }
                     }
                 )
             }
@@ -264,6 +320,21 @@ fun SettingPagerMaterial(
                                 enabled = !uiState.isLateLoadMode,
                                 checked = uiState.isLateLoadMode || uiState.useSoftReboot,
                                 onCheckedChange = actions.onSetUseSoftReboot
+                            )
+                        },
+                        {
+                            val avcSpoofSummary = when (uiState.avcSpoofStatus) {
+                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
+                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                else -> stringResource(id = R.string.settings_avc_spoof_summary)
+                            }
+                            SegmentedSwitchItem(
+                                icon = Icons.Filled.EditNote,
+                                title = stringResource(id = R.string.settings_avc_spoof),
+                                summary = avcSpoofSummary,
+                                enabled = uiState.avcSpoofStatus == "supported",
+                                checked = uiState.isAvcSpoofEnabled,
+                                onCheckedChange = actions.onSetAvcSpoofEnabled
                             )
                         },
                     )

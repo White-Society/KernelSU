@@ -13,6 +13,7 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ShellUtils
+import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -28,6 +29,9 @@ import org.json.JSONArray
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -35,6 +39,7 @@ import java.util.concurrent.TimeUnit
  * @date 2023/1/1.
  */
 private const val TAG = "KsuCli"
+private const val BUSYBOX = "/data/adb/ksu/bin/busybox"
 
 private fun getKsuDaemonPath(): String {
     return ksuApp.applicationInfo.nativeLibraryDir + File.separator + "libksud.so"
@@ -176,6 +181,52 @@ fun uninstallModule(id: String): Boolean {
     return result
 }
 
+private fun processUiPrintLine(s: String?): Pair<Int, String?> {
+    if (s == null) {
+        return Pair(1,null)
+    }
+
+    val check1 = s.startsWith("ui_print")
+    val trimmed = s.trim()
+    val check2 = trimmed.startsWith("ui_print")
+    if (!check1 && check2) return Pair(1,null)
+
+    return if(check1) {
+        Pair(1,trimmed.drop(8).dropWhile { it.isWhitespace() })
+    }
+    else {
+        Pair(2, trimmed)
+    }
+}
+
+private fun flashWithIoAk3(
+    cmd: String,
+    onStdout: (String) -> Unit,
+    onStderr: (String) -> Unit
+): Shell.Result {
+
+    val stdoutCallback: CallbackList<String?> = object : CallbackList<String?>() {
+        override fun onAddElement(s: String?) {
+            val (type, text) = processUiPrintLine(s)
+            if(type == 1) {
+                text?.let(onStdout)
+            } else {
+                text?.let(onStderr)
+            }
+        }
+    }
+
+    val stderrCallback: CallbackList<String?> = object : CallbackList<String?>() {
+        override fun onAddElement(s: String?) {
+            onStderr(s ?: "")
+        }
+    }
+
+    return withNewRootShell {
+        newJob().add(cmd).to(stdoutCallback, stderrCallback).exec()
+    }
+}
+
 private fun flashWithIO(
     cmd: String,
     onStdout: (String) -> Unit,
@@ -268,6 +319,9 @@ sealed class LkmSelection : Parcelable {
     data class KmiString(val value: String) : LkmSelection()
 
     @Parcelize
+    data class KmiStringXX(val value: String) : LkmSelection()
+
+    @Parcelize
     data object KmiNone : LkmSelection()
 }
 
@@ -331,10 +385,13 @@ fun installBoot(
     val lkmFile = writeLkmFile(lkm)
     if (lkmFile != null) {
         cmd += " -m ${lkmFile.absolutePath}"
-    } else if (lkm is LkmSelection.KmiString) {
-        cmd += " --kmi ${lkm.value}"
+    } else {
+        when (lkm) {
+            is LkmSelection.KmiString -> cmd += " --kmi ${lkm.value}"
+            is LkmSelection.KmiStringXX -> cmd += " --kmi xx-${lkm.value}"
+            LkmSelection.KmiNone, is LkmSelection.LkmUri -> Unit
+        }
     }
-
     if (bootFile != null) {
         val downloadsDir =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -499,6 +556,54 @@ fun reboot(reason: String = "") {
     ShellUtils.fastCmd(shell, "/system/bin/svc power reboot $reason || /system/bin/reboot $reason")
 }
 
+fun flashAnyKernelZip(
+    uri: Uri,
+    onStdout: (String) -> Unit,
+    onStderr: (String) -> Unit
+): FlashResult {
+    val resolver = ksuApp.contentResolver
+
+    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val tmpFile = File(ksuApp.cacheDir, "anykernel_${timestamp}.zip")
+    resolver.openInputStream(uri).use { input ->
+        tmpFile.outputStream().use { out ->
+            input?.copyTo(out)
+        }
+    }
+
+    val destZip = tmpFile.absolutePath
+    val destZipName = File(destZip).name
+    val destDirFile = File(ksuApp.cacheDir, "anykernel3_${timestamp}")
+    val destDir = destDirFile.absolutePath
+
+    val cmd = """
+        mkdir -p '$destDir' && \
+        $BUSYBOX unzip -p -o '$destZip' "META-INF/com/google/android/update-binary" > '$destDir/update-binary' 2>/dev/null && \
+        cp '$destZip' '$destDir/$destZipName' 2>/dev/null || true && \
+        $BUSYBOX chmod 755 '$destDir/update-binary' && \
+        $BUSYBOX chown root:root '$destDir/update-binary' && \
+        (cd '$destDir' && \
+            if [ -f './update-binary' ] && grep -q "AnyKernel3" './update-binary'; then \
+                AKHOME='$destDir/tmp' $BUSYBOX ash '$destDir/update-binary' 3 1 '$destDir/$destZipName'; \
+            else \
+                echo 'No installer script found' >&2; exit 1; \
+            fi)
+    """.trimIndent().replace(Regex("\\s+\\\\\\s*"), " ")
+
+    val result = flashWithIoAk3(cmd, onStdout, onStderr)
+    try {
+        return FlashResult(result, result.isSuccess)
+    } finally {
+        try {
+            runCatching {
+                createRootShell(true).use { sh ->
+                    sh.newJob().add("rm -rf '$destDir' '$destZip'").exec()
+                }
+            }
+        } catch (_: Throwable) { }
+    }
+}
+
 fun rootAvailable(): Boolean {
     val shell = getRootShell()
     return shell.isRoot
@@ -514,7 +619,7 @@ suspend fun getSupportedKmis(): List<String> = withContext(Dispatchers.IO) {
     val shell = getRootShell()
     val cmd = "boot-info supported-kmis"
     val out = shell.newJob().add("${getKsuDaemonPath()} $cmd").to(ArrayList(), null).exec().out
-    out.filter { it.isNotBlank() }.map { it.trim() }
+    out.filter { it.isNotBlank() }.map { it.trim() }.filter { !it.startsWith("xx-") }
 }
 
 suspend fun isAbDevice(): Boolean = withContext(Dispatchers.IO) {
@@ -631,4 +736,8 @@ fun launchApp(packageName: String, userId: Int? = null) {
 fun restartApp(packageName: String, userId: Int? = null) {
     forceStopApp(packageName, userId)
     launchApp(packageName, userId)
+}
+
+fun isWebuiModuleInstalled(modId: String): Boolean {
+    return SuFile("/data/adb/modules/$modId/webroot/index.html").exists()
 }

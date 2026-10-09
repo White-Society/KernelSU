@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.ksuApp
-import me.weishu.kernelsu.ui.MainActivity
+import me.weishu.kernelsu.ui.util.module.Shortcut
 import okhttp3.Call
 import okhttp3.Request
 import java.io.IOException

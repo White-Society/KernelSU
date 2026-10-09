@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.automirrored.rounded.Rule
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Adb
 import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.BugReport
@@ -26,6 +27,10 @@ import androidx.compose.material.icons.rounded.DisplaySettings
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LayersClear
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.ElectricalServices
+import androidx.compose.material.icons.rounded.Fence
+import androidx.compose.material.icons.rounded.FolderDelete
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Security
@@ -111,20 +116,20 @@ fun SettingPagerMiuix(
                             .padding(top = 12.dp)
                             .fillMaxWidth(),
                     ) {
-                        SwitchPreference(
-                            title = stringResource(id = R.string.settings_check_update),
-                            summary = stringResource(id = R.string.settings_check_update_summary),
-                            startAction = {
-                                Icon(
-                                    Icons.Rounded.SystemUpdate,
-                                    modifier = Modifier.padding(end = 6.dp),
-                                    contentDescription = stringResource(id = R.string.settings_check_update),
-                                    tint = colorScheme.onBackground
-                                )
-                            },
-                            checked = uiState.checkUpdate,
-                            onCheckedChange = actions.onSetCheckUpdate
-                        )
+//                        SwitchPreference(
+//                            title = stringResource(id = R.string.settings_check_update),
+//                            summary = stringResource(id = R.string.settings_check_update_summary),
+//                            startAction = {
+//                                Icon(
+//                                    Icons.Rounded.SystemUpdate,
+//                                    modifier = Modifier.padding(end = 6.dp),
+//                                    contentDescription = stringResource(id = R.string.settings_check_update),
+//                                    tint = colorScheme.onBackground
+//                                )
+//                            },
+//                            checked = uiState.checkUpdate,
+//                            onCheckedChange = actions.onSetCheckUpdate
+//                        )
                         KsuIsValid {
                             SwitchPreference(
                                 title = stringResource(id = R.string.settings_module_check_update),
@@ -198,6 +203,49 @@ fun SettingPagerMiuix(
                                 },
                                 onClick = actions.onOpenProfileTemplate
                             )
+                        }
+                    }
+
+                    if (uiState.isToolkitInstalled || uiState.isKpatchNextInstalled) KsuIsValid {
+                        Card(
+                            modifier = Modifier
+                                .padding(top = 12.dp)
+                                .fillMaxWidth(),
+                        ) {
+                            if (uiState.isToolkitInstalled) {
+                                ArrowPreference(
+                                    title = stringResource(R.string.settings_kernelsu_toolkit),
+                                    summary = stringResource(R.string.settings_kernelsu_toolkit_summary),
+                                    startAction = {
+                                        Icon(
+                                            Icons.Rounded.Build,
+                                            modifier = Modifier.padding(end = 6.dp),
+                                            contentDescription = stringResource(id = R.string.settings_kernelsu_toolkit),
+                                            tint = colorScheme.onBackground
+                                        )
+                                    },
+                                    onClick = {
+                                        actions.onOpenWebUi("ksu_toolkit", "KernelSU Toolkit")
+                                    }
+                                )
+                            }
+                            if (uiState.isKpatchNextInstalled) {
+                                ArrowPreference(
+                                    title = stringResource(R.string.settings_kpatch_next),
+                                    summary = stringResource(R.string.settings_kpatch_next_summary),
+                                    startAction = {
+                                        Icon(
+                                            Icons.Rounded.Build,
+                                            modifier = Modifier.padding(end = 6.dp),
+                                            contentDescription = stringResource(id = R.string.settings_kpatch_next),
+                                            tint = colorScheme.onBackground
+                                        )
+                                    },
+                                    onClick = {
+                                        actions.onOpenWebUi("KPatch-Next", "KPatch-Next")
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -332,6 +380,27 @@ fun SettingPagerMiuix(
                                 enabled = !uiState.isLateLoadMode,
                                 checked = uiState.isLateLoadMode || uiState.useSoftReboot,
                                 onCheckedChange = actions.onSetUseSoftReboot
+                            )
+
+                            val avcSpoofSummary = when (uiState.avcSpoofStatus) {
+                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
+                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
+                                else -> stringResource(id = R.string.settings_avc_spoof_summary)
+                            }
+                            SwitchPreference(
+                                title = stringResource(id = R.string.settings_avc_spoof),
+                                summary = avcSpoofSummary,
+                                startAction = {
+                                    Icon(
+                                        Icons.Rounded.EditNote,
+                                        modifier = Modifier.padding(end = 6.dp),
+                                        contentDescription = stringResource(id = R.string.settings_avc_spoof),
+                                        tint = colorScheme.onBackground
+                                    )
+                                },
+                                enabled = uiState.avcSpoofStatus == "supported",
+                                checked = uiState.isAvcSpoofEnabled,
+                                onCheckedChange = actions.onSetAvcSpoofEnabled
                             )
                         }
 

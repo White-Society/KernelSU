@@ -14,8 +14,12 @@ data class SettingsUiState(
     val miuixMonet: Boolean = false,
     val keyColor: Int = 0,
     val colorStyle: String = PaletteStyle.TonalSpot.name,
-    val colorSpec: String = ColorSpec.SpecVersion.SPEC_2025.name,
-    val enablePredictiveBack: Boolean = false,
+    val colorSpec: String = ColorSpec.SpecVersion.Default.name,
+    val enableOfficialLauncher: Boolean = false,
+    val classicUi: Boolean = false,
+    val showSwitchIcon: Boolean = false,
+    val scrollAnimation: Boolean = false,
+    val enablePredictiveBack: Boolean = true,
     val enableSwipeDismiss: Boolean = true,
     val pagerInterceptionMode: Int = 1,
     val enableBlur: Boolean = true,
@@ -25,6 +29,10 @@ data class SettingsUiState(
     val pageScale: Float = 1.0f,
     val moduleDescriptionMaxLines: Int = 4,
     val enableWebDebugging: Boolean = false,
+
+    // WebUI Modules shortcut entry
+    val isToolkitInstalled: Boolean = false,
+    val isKpatchNextInstalled: Boolean = false,
 
     // Su Compat
     val suCompatStatus: String = "",
@@ -42,6 +50,10 @@ data class SettingsUiState(
     // SU Log
     val sulogStatus: String = "",
     val isSulogEnabled: Boolean = false,
+
+    // Avc spoof
+    val avcSpoofStatus: String = "",
+    val isAvcSpoofEnabled: Boolean = true,
 
     // Umount Modules
     val isDefaultUmountModules: Boolean = false,
@@ -72,9 +84,11 @@ data class SettingsScreenActions(
     val onSetSelinuxHideEnabled: (Boolean) -> Unit,
     val onSetSulogEnabled: (Boolean) -> Unit,
     val onSetAdbRootEnabled: (Boolean) -> Unit,
+    val onSetAvcSpoofEnabled: (Boolean) -> Unit,
     val onSetDefaultUmountModules: (Boolean) -> Unit,
     val onSetEnableWebDebugging: (Boolean) -> Unit,
     val onSetAutoJailbreak: (Boolean) -> Unit,
     val onSetUseSoftReboot: (Boolean) -> Unit,
+    val onOpenWebUi: (String, String) -> Unit,
     val onOpenAbout: () -> Unit,
 )
