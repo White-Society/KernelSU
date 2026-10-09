@@ -231,8 +231,8 @@ struct ksu_lsm_hook selinux_setprocattr_hook = KSU_LSM_HOOK_INIT(setprocattr, "s
 typedef int (*setprocattr_fn)(const char *name, void *value, size_t size);
 static int __nocfi my_setprocattr(const char *name, void *value, size_t size)
 {
-    int error, perm_error;
-    u32 mysid, sid;
+    int error;
+    u32 mysid, sid, tmp;
     char *str = value;
     if (likely(current_uid().val < 10000)) {
         goto call_orig;
@@ -241,6 +241,17 @@ static int __nocfi my_setprocattr(const char *name, void *value, size_t size)
     if (strcmp(name, "current")) {
         goto call_orig;
     }
+    mysid = current_sid();
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+    error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
+#else
+    error = avc_has_perm(&selinux_state, mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
+#endif
+    if (error) {
+        return error;
+    }
+
     if (size && str[0] && str[0] != '\n') {
         if (str[size - 1] == '\n') {
             str[size - 1] = 0;
@@ -252,13 +263,14 @@ static int __nocfi my_setprocattr(const char *name, void *value, size_t size)
         error = security_context_to_sid(&fake_state, str, size, &sid, GFP_KERNEL);
 #endif
         if (error) {
-            mysid = current_sid();
+            return error;
+        } else {
+            // sync to global sidtab
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
-            perm_error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
+            security_context_to_sid(str, size, &tmp, GFP_KERNEL);
 #else
-            perm_error = avc_has_perm(&selinux_state, mysid, mysid, SECCLASS_PROCESS, PROCESS__SETCURRENT, NULL);
+            security_context_to_sid(&selinux_state, str, size, &tmp, GFP_KERNEL);
 #endif
-            return perm_error ?: error;
         }
     }
 

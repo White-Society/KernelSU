@@ -291,7 +291,8 @@ class DownloadService : Service() {
 
         val primaryPendingIntent = when (completionAction) {
             DownloadCompletionAction.INSTALL_MODULE -> PendingIntent.getActivity(
-                this, id, Intent(this, MainActivity::class.java).apply {
+                this, id, Intent().apply {
+                    component = Shortcut.getLauncherComponent(this@DownloadService)
                     action = ACTION_INSTALL_MODULE
                     putExtra(EXTRA_MODULE_URI, uri.toString())
                     putExtra(EXTRA_DOWNLOAD_ID, id)
