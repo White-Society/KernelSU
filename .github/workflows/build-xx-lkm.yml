@@ -77,8 +77,8 @@ jobs:
         # The xx branch Makefile carries upstream defaults; fall back to KowSU
         # values when the caller doesn't provide them (e.g. non-PR builds).
         PACKAGE_NAME="${PACKAGE_NAME:-com.mrgadget84.whitesu}"
-        EXPECTED_SIZE="${EXPECTED_SIZE:-0x375}"
-        EXPECTED_HASH="${EXPECTED_HASH:-484fcba6e6c43b1fb09700633bf2fb4758f13cb0b2f4457b80d075084b26c588}"
+        EXPECTED_SIZE="${EXPECTED_SIZE:-0x30c}"
+        EXPECTED_HASH="${EXPECTED_HASH:-0152b5d33f5a2daee12021c3462da51c8e94f6b34768f76327c0cf361f080a54}"
 
         EXTRA_ARGS="KSU_PACKAGE_NAME=$PACKAGE_NAME"
         EXTRA_ARGS="$EXTRA_ARGS KSU_EXPECTED_SIZE=$EXPECTED_SIZE"
