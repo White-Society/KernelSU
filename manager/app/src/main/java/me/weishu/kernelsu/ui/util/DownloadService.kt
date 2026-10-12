@@ -30,7 +30,7 @@ import me.weishu.kernelsu.data.registry.RegistryDownloadStore
 import me.weishu.kernelsu.data.registry.RegistryUrls
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.ksuApp
-import me.weishu.kernelsu.ui.MainActivity
+import me.weishu.kernelsu.ui.util.module.Shortcut
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request

@@ -2,8 +2,9 @@ name: Build Manager
 
 on:
   push:
-    branches: [ "main", "dev", "ci" ]
+    branches: [ "main", "dev", "ci", "master" ]
     paths:
+      - 'README.md'
       - '.github/workflows/build-manager.yml'
       - '.github/workflows/build-lkm.yml'
       - '.github/workflows/ddk-lkm.yml'
@@ -35,7 +36,9 @@ on:
       - 'userspace/**'
       - 'Cargo.lock'
       - 'Cargo.toml'
+      - 'scripts/ksubot.py'
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   generate-key:
@@ -101,15 +104,24 @@ jobs:
       expected_hash: ${{ needs.generate-key.outputs.expected_hash || '' }}
     secrets: inherit
 
+  build-xx-lkm:
+    needs: generate-key
+    uses: ./.github/workflows/build-xx-lkm.yml
+    with:
+      expected_size: ${{ needs.generate-key.outputs.expected_size || '' }}
+      expected_hash: ${{ needs.generate-key.outputs.expected_hash || '' }}
+    secrets: inherit
+
   build-ksuinit:
     uses: ./.github/workflows/ksuinit.yml
 
   build-ksud:
-    needs: [build-lkm, build-ksuinit]
+    needs: [build-lkm, build-xx-lkm, build-ksuinit]
     strategy:
       matrix:
         include:
           - target: aarch64-linux-android
+          - target: armv7-linux-androideabi
           - target: x86_64-linux-android
           - target: riscv64-linux-android
     uses: ./.github/workflows/ksud.yml
@@ -119,7 +131,7 @@ jobs:
       pack_ksuinit: true
   
   build-ksud-extra:
-    needs: [build-lkm, build-ksuinit]
+    needs: [build-lkm, build-xx-lkm, build-ksuinit]
     strategy:
       matrix:
         include:
@@ -155,7 +167,7 @@ jobs:
           fetch-depth: 0
 
       - name: Write key
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
+        if: ${{ github.event_name != 'pull_request' || github.ref_type == 'tag' }}
         run: |
           if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
             {
@@ -194,13 +206,13 @@ jobs:
       - name: Build with Gradle
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./gradlew clean assembleRelease -PIS_PR_BUILD=true
+            ./gradlew assembleRelease -PIS_PR_BUILD=true
           else
-            ./gradlew clean assembleRelease
+            ./gradlew assembleRelease
           fi
 
       - name: Upload build artifact
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request') || github.ref_type == 'tag' }}
         uses: actions/upload-artifact@v7
         with:
           name: manager-gradle
@@ -208,7 +220,7 @@ jobs:
 
       - name: Upload mappings
         uses: actions/upload-artifact@v7
-        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
+        if: ${{ ( github.event_name != 'pull_request') || github.ref_type == 'tag' }}
         with:
           name: "mappings"
           path: "manager/app/build/outputs/mapping/release/"
@@ -245,6 +257,12 @@ jobs:
           name: ksud-aarch64-linux-android
           path: artifacts/ksud-aarch64-linux-android
 
+      - name: Download arm ksud
+        uses: actions/download-artifact@v8
+        with:
+          name: ksud-armv7-linux-androideabi
+          path: artifacts/ksud-armv7-linux-androideabi
+
       - name: Download x86_64 ksud
         uses: actions/download-artifact@v8
         with:
@@ -265,20 +283,24 @@ jobs:
           cp -f "$APK" manager/app/build/outputs/apk/release/
 
           mkdir -p target/aarch64-linux-android/release
+          mkdir -p target/armv7-linux-androideabi/release
           mkdir -p target/x86_64-linux-android/release
           mkdir -p target/riscv64-linux-android/release
           ARM64_KSUD=$(find artifacts/ksud-aarch64-linux-android -type f -name ksud | head -n 1)
+          ARM_KSUD=$(find artifacts/ksud-armv7-linux-androideabi -type f -name ksud | head -n 1)
           X86_64_KSUD=$(find artifacts/ksud-x86_64-linux-android -type f -name ksud | head -n 1)
           RISCV64_KSUD=$(find artifacts/ksud-riscv64-linux-android -type f -name ksud | head -n 1)
           test -n "$ARM64_KSUD"
+          test -n "$ARM_KSUD"
           test -n "$X86_64_KSUD"
           test -n "$RISCV64_KSUD"
           cp -f "$ARM64_KSUD" target/aarch64-linux-android/release/ksud
+          cp -f "$ARM_KSUD" target/armv7-linux-androideabi/release/ksud
           cp -f "$X86_64_KSUD" target/x86_64-linux-android/release/ksud
           cp -f "$RISCV64_KSUD" target/riscv64-linux-android/release/ksud
 
       - name: Prepare signing inputs
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request') || github.ref_type == 'tag' }}
         env:
           PR_KEYSTORE: ${{ needs.generate-key.outputs.keystore }}
           PR_KEYSTORE_PASSWORD: ${{ needs.generate-key.outputs.keystore_password }}
@@ -304,12 +326,13 @@ jobs:
           fi
 
       - name: Repack and resign
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request') || github.ref_type == 'tag' }}
         run: |
           python3 repack_apk.py repack \
             -b release \
             -t release \
             -a arm64-v8a \
+            -a armeabi-v7a \
             -a x86_64 \
             -a riscv64 \
             -K "$SIGN_KEYSTORE_FILE" \
@@ -319,7 +342,7 @@ jobs:
             --strip
 
       - name: Upload build artifact
-        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request') || github.ref_type == 'tag' }}
         uses: actions/upload-artifact@v7
         with:
           name: manager

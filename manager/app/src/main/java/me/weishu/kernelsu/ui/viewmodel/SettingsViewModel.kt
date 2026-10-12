@@ -18,6 +18,7 @@ import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.screen.settings.SettingsUiState
 import me.weishu.kernelsu.ui.theme.ColorMode
+import me.weishu.kernelsu.ui.util.isWebuiModuleInstalled
 
 class SettingsViewModel(
     private val repo: SettingsRepository = SettingsRepositoryImpl()
@@ -47,9 +48,17 @@ class SettingsViewModel(
             val pageScale = repo.pageScale
             val moduleDescriptionMaxLines = repo.moduleDescriptionMaxLines
             val enableWebDebugging = repo.enableWebDebugging
+            val enableOfficialLauncher = repo.enableOfficialLauncher
+            val classicUi = repo.classicUi
+            val showSwitchIcon = repo.showSwitchIcon
+            val scrollAnimation = repo.scrollAnimation
             val colorStyle = repo.colorStyle
             val colorSpec = repo.colorSpec
             val isLkmMode = repo.isLkmMode()
+
+            // WebUI modules shortcut entry
+            val isToolkitInstalled = isWebuiModuleInstalled("ksu_toolkit")
+            val isKpatchNextInstalled = isWebuiModuleInstalled("KPatch-Next")
 
             // Async loading for natives/features
             val suCompatStatus = repo.getSuCompatStatus()
@@ -100,6 +109,10 @@ class SettingsViewModel(
                     themeMode = themeMode,
                     miuixMonet = miuixMonet,
                     keyColor = keyColor,
+                    enableOfficialLauncher = enableOfficialLauncher,
+                    classicUi = classicUi,
+                    showSwitchIcon = showSwitchIcon,
+                    scrollAnimation = scrollAnimation,
                     enablePredictiveBack = enablePredictiveBack,
                     enableSwipeDismiss = enableSwipeDismiss,
                     pagerInterceptionMode = pagerInterceptionMode,
@@ -112,6 +125,8 @@ class SettingsViewModel(
                     enableWebDebugging = enableWebDebugging,
                     colorStyle = colorStyle,
                     colorSpec = colorSpec,
+                    isToolkitInstalled = isToolkitInstalled,
+                    isKpatchNextInstalled = isKpatchNextInstalled,
                     suCompatStatus = suCompatStatus,
                     suCompatMode = suCompatMode,
                     isSuEnabled = isSuEnabled,
@@ -125,6 +140,8 @@ class SettingsViewModel(
                     isSelinuxHideEnabled = isSelinuxHideEnabled,
                     sulogStatus = sulogStatus,
                     isSulogEnabled = isSulogEnabled,
+                    avcSpoofStatus = avcSpoofStatus,
+                    isAvcSpoofEnabled = isAvcSpoofEnabled,
                     isDefaultUmountModules = isDefaultUmountModules,
                     isLkmMode = isLkmMode,
                     autoJailbreak = autoJailbreak,
@@ -217,6 +234,26 @@ class SettingsViewModel(
     fun setColorSpec(spec: String) {
         repo.colorSpec = spec
         _uiState.update { it.copy(colorSpec = spec) }
+    }
+
+    fun setEnableOfficialLauncher(enabled: Boolean) {
+        repo.enableOfficialLauncher = enabled
+        _uiState.update { it.copy(enableOfficialLauncher = enabled) }
+    }
+
+    fun setClassicUi(enabled: Boolean) {
+        repo.classicUi = enabled
+        _uiState.update { it.copy(classicUi = enabled) }
+    }
+
+    fun setShowSwitchIcon(enabled: Boolean) {
+        repo.showSwitchIcon = enabled
+        _uiState.update { it.copy(showSwitchIcon = enabled) }
+    }
+
+    fun setScrollAnimation(enabled: Boolean) {
+        repo.scrollAnimation = enabled
+        _uiState.update { it.copy(scrollAnimation = enabled) }
     }
 
     fun setEnablePredictiveBack(enabled: Boolean) {
@@ -325,6 +362,15 @@ class SettingsViewModel(
                             Toast.LENGTH_LONG).show()
                     }
                 }
+            }
+        }
+    }
+
+    fun setAvcSpoofEnabled(enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (repo.setAvcSpoofEnabled(enabled)) {
+                repo.execKsudFeatureSave()
+                _uiState.update { it.copy(isAvcSpoofEnabled = enabled) }
             }
         }
     }
