@@ -134,46 +134,40 @@ import { moduleInfo } from 'kernelsu';
 console.log(moduleInfo());
 ```
 
-### pm
+### listPackages
 
-Package-manager helpers, multi-user aware. A package installed for several users (e.g. `com.android.bluetooth` with uid `1002` for user 0 and `1001002` for user 10) is listed once by `pm.listPackages`, and yields one info entry per uid from `pm.getPackagesInfo`.
+List installed packages.
 
-```javascript
-import { pm } from 'kernelsu';
-
-const packages = pm.listPackages('user');
-const infos = pm.getPackagesInfo(['com.android.settings', 'com.android.shell']);
-```
-
-#### pm.listPackages
-
-List installed package names, deduplicated across users. Falls back to the deprecated top-level `listPackages` when the multi-user interface is unavailable.
-
-Returns an array of unique package names.
+Returns an array of package names.
 
 - `type` `<string>` The type of packages to list: "user", "system", or "all".
 
 ```javascript
-import { pm } from 'kernelsu';
+import { listPackages } from 'kernelsu';
 // list user packages
-const packages = pm.listPackages("user");
+const packages = listPackages("user");
 ```
 
-- tips: when `pm.listPackages` api is available, you can use ksu://icon/{packageName} to get app icon.
+- tips: when `listPackages` api is available, you can use ksu://icon/{packageName} to get app icon.
 
 ``` javascript
 img.src = "ksu://icon/" + packageName;
 ```
 
-#### pm.getPackagesInfo
+### getPackagesInfo
 
-Get information for a list of packages, one entry per uid. When the multi-user interface is unavailable it falls back to the deprecated top-level `getPackagesInfo` and normalizes the result: `userId` is derived as `Math.floor(uid / 100000)` (entries may only be one per package, not one per uid).
+Get information for a list of packages.
 
-Returns a flat array: one entry per uid for each resolved package, following the input package order, with uids ascending within a package. If a package is missing or inaccessible, the corresponding entry contains `packageName` and `error` instead.
+Returns an array containing `PackagesInfo` objects for packages that were resolved. If a package is missing or inaccessible, the corresponding entry contains `packageName` and `error` instead.
 
 - `packages` `<string[]>` The list of package names.
 
-#### PackageInfoPerUid
+```javascript
+import { getPackagesInfo } from 'kernelsu';
+const packages = getPackagesInfo(['com.android.settings', 'com.android.shell']);
+```
+
+#### PackagesInfo
 
 An object contains:
 
@@ -182,8 +176,7 @@ An object contains:
 - `versionCode` `<number>` Version code of the application.
 - `appLabel` `<string>` Display name of the application.
 - `isSystem` `<boolean | null>` Whether the application is a system app. `null` if application info is unavailable.
-- `uid` `<number | null>` UID of the application for one user, e.g. `1002` or `1001002`. `null` if application info is unavailable.
-- `userId` `<number | null>` User id the uid belongs to, i.e. `uid / 100000`. `null` if application info is unavailable.
+- `uid` `<number | null>` UID of the application. `null` if application info is unavailable.
 
 If a package could not be resolved, the returned object contains:
 
@@ -205,20 +198,6 @@ The exported `io` object provides file system operations with root access. It ac
 
 ```javascript
 import { io } from 'kernelsu';
-```
-
-#### io.support
-
-`boolean` — whether the advanced file interface is available in the current environment. This is a live check of the `ksu.io` bridge, safe to read at any time.
-
-```javascript
-import { io, toast } from 'kernelsu';
-
-if (!io.support) {
-    toast('Current environment does not support the advanced file interface. Please update KernelSU Manager.');
-    return;
-}
-const writer = io.FileOutputStream();
 ```
 
 #### io.File

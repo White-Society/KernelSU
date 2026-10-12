@@ -38,8 +38,6 @@ import me.weishu.kernelsu.ui.util.LkmSelection
 import me.weishu.kernelsu.ui.util.getAvailablePartitions
 import me.weishu.kernelsu.ui.util.getCurrentKmi
 import me.weishu.kernelsu.ui.util.getDefaultPartition
-import me.weishu.kernelsu.ui.util.getLoadedBlockableModules
-import me.weishu.kernelsu.ui.util.isBlockModulesValid
 import me.weishu.kernelsu.ui.util.getSlotSuffix
 import me.weishu.kernelsu.ui.util.isAbDevice
 import me.weishu.kernelsu.ui.util.probeRemoteBootPartitions
@@ -72,24 +70,6 @@ fun InstallScreen() {
     var allowShell by rememberSaveable { mutableStateOf(false) }
     var enableAdb by rememberSaveable { mutableStateOf(false) }
     var forceBackup by rememberSaveable { mutableStateOf(false) }
-    var blockModulesEnabled by rememberSaveable { mutableStateOf(false) }
-    var blockModules by rememberSaveable { mutableStateOf("") }
-    var blockModulesPrefilled by rememberSaveable { mutableStateOf(false) }
-    // Blocking a module the device needs can bootloop it, so nothing is
-    // blocked unless the user explicitly opts in.
-    val effectiveBlockModules = if (blockModulesEnabled) blockModules else ""
-
-    // Pre-fill the block list with the known anti-root modules actually loaded
-    // on this device, once. It only takes effect once the user opts in.
-    LaunchedEffect(Unit) {
-        if (!blockModulesPrefilled) {
-            blockModulesPrefilled = true
-            val detected = getLoadedBlockableModules()
-            if (detected.isNotEmpty() && blockModules.isBlank()) {
-                blockModules = detected.joinToString(",")
-            }
-        }
-    }
 
     val currentKmi by produceState(initialValue = "") { value = getCurrentKmi() }
     val partitions by produceState(initialValue = emptyList()) { value = getAvailablePartitions() }
@@ -145,11 +125,25 @@ fun InstallScreen() {
         }
     }
 
-    val blockModulesInvalidMessage = stringResource(R.string.install_block_modules_invalid)
     val onInstall = {
-        if (!isBlockModulesValid(effectiveBlockModules)) {
-            showMessage(blockModulesInvalidMessage)
-        } else installMethod?.let { method ->
+        installMethod?.let { method ->
+            if (method is InstallMethod.AnyKernel) {
+                method.uri?.let { uri -> navigator.push(Route.Flash(FlashIt.FlashAnyKernel(uri))) }
+                return@let
+            }
+            // Determine final LKM selection based on variant
+            val finalLkmSelection = when (lkmVariant) {
+                LkmVariant.KOWSU -> lkmSelection
+                LkmVariant.XXKSU -> {
+                    // Convert current selection to XX variant
+                    val currentSelection = lkmSelection
+                    when (currentSelection) {
+                        is LkmSelection.KmiString -> LkmSelection.KmiStringXX(currentSelection.value)
+                        else -> currentSelection
+                    }
+                }
+                LkmVariant.CUSTOM -> lkmSelection
+            }
             navigator.push(
                 Route.Flash(
                     when (method) {
@@ -159,8 +153,7 @@ fun InstallScreen() {
                             lkm = finalLkmSelection,
                             allowShell = allowShell,
                             enableAdb = enableAdb,
-                            backup = forceBackup,
-                            blockModules = effectiveBlockModules
+                            backup = forceBackup
                         )
                         else -> FlashIt.FlashBoot(
                             boot = if (method is InstallMethod.SelectFile) method.uri else null,
@@ -169,8 +162,7 @@ fun InstallScreen() {
                             partition = partitions.getOrNull(partitionSelectionIndex),
                             allowShell = allowShell,
                             enableAdb = enableAdb,
-                            backup = method is InstallMethod.SelectFile && forceBackup,
-                            blockModules = effectiveBlockModules
+                            backup = method is InstallMethod.SelectFile && forceBackup
                         )
                     }
                 )
@@ -283,9 +275,6 @@ fun InstallScreen() {
         enableAdb = enableAdb,
         forceBackup = forceBackup,
         canForceBackup = installMethod is InstallMethod.SelectFile,
-        blockModulesEnabled = blockModulesEnabled,
-        blockModules = blockModules,
-        blockModulesValid = isBlockModulesValid(effectiveBlockModules),
     )
     val actions = InstallScreenActions(
         onBack = dropUnlessResumed { navigator.pop() },
@@ -366,12 +355,6 @@ fun InstallScreen() {
         },
         onSelectForceBackup = {
             forceBackup = it
-        },
-        onSelectBlockModules = {
-            blockModulesEnabled = it
-        },
-        onBlockModulesChange = {
-            blockModules = it
         }
     )
 

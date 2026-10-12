@@ -33,7 +33,6 @@ import java.io.File
 private const val WEB_DOMAIN = "mui.kernelsu.org"
 private const val KSU_SCHEME = "ksu"
 private const val ICON_HOST = "icon"
-private const val INTERNAL_BLOB_DOWNLOAD_HOST = "blob-download.kernelsu.internal"
 
 private fun loadDownloadJs(context: Context): String {
     return context.assets.open("webview/download.js").bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -130,7 +129,7 @@ internal suspend fun prepareWebView(
                                 ?.packageInfo?.applicationInfo
                             if (appInfo != null) {
                                 val icon = AppIconCache.loadIconSync(activity, appInfo.withMainUserUid(activity), 512)
-                                val stream = ByteArrayOutputStream()
+                                val stream = java.io.ByteArrayOutputStream()
                                 icon.compress(Bitmap.CompressFormat.PNG, 100, stream)
                                 return WebResourceResponse(
                                     "image/png", null, 200, "OK",
@@ -227,9 +226,7 @@ internal suspend fun prepareWebView(
             webView.addJavascriptInterface(webviewInterface, "ksu")
             webView.addJavascriptInterface(downloadInterface, "ksu_download")
             webView.setDownloadListener { url, _, _, _, _ ->
-                if (Uri.parse(url).host != INTERNAL_BLOB_DOWNLOAD_HOST) {
-                    downloadInterface.openExternal(url)
-                }
+                downloadInterface.openExternal(url)
             }
             webView.evaluateJavascript(loadDownloadJs(activity), null)
             webUIState.uiEvent = WebUIEvent.WebViewReady

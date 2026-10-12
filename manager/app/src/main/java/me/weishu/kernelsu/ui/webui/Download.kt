@@ -35,17 +35,7 @@ internal fun writeWebUIDownload(
     onBytesWritten: (Long) -> Unit = {},
 ): Long {
     target.parentFile?.mkdirs()
-    return outputStreamFactory(target).use { output ->
-        writeWebUIDownload(source, output, onBytesWritten)
-    }
-}
-
-internal fun writeWebUIDownload(
-    source: InputStream,
-    output: OutputStream,
-    onBytesWritten: (Long) -> Unit = {},
-): Long {
-    output.buffered(64 * 1024).use { bufferedOutput ->
+    outputStreamFactory(target).buffered(64 * 1024).use { output ->
         val buffer = ByteArray(8 * 1024)
         var total = 0L
         while (true) {
@@ -53,11 +43,11 @@ internal fun writeWebUIDownload(
             if (read == -1) {
                 break
             }
-            bufferedOutput.write(buffer, 0, read)
+            output.write(buffer, 0, read)
             total += read
             onBytesWritten(total)
         }
-        bufferedOutput.flush()
+        output.flush()
         return total
     }
 }

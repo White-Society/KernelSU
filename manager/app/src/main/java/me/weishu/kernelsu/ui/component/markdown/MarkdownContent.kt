@@ -27,7 +27,6 @@ import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 fun MarkdownContent(
     content: String,
     isMarkdown: Boolean,
-    restrictedBaseUrl: String? = null,
 ) {
     val uiMode = LocalUiMode.current
     var loaded by remember(content, isMarkdown) { mutableStateOf(false) }
@@ -60,7 +59,6 @@ fun MarkdownContent(
                 isMarkdown = isMarkdown,
                 onLoadingChange = { loaded = !it },
                 containerColor = containerColor,
-                restrictedBaseUrl = restrictedBaseUrl,
             )
         }
         if (placeholderAlpha > 0f) {
