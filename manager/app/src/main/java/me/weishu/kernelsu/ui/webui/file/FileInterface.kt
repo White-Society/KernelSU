@@ -3,6 +3,7 @@ package me.weishu.kernelsu.ui.webui.file
 import android.util.Log
 import android.webkit.JavascriptInterface
 import com.topjohnwu.superuser.io.SuFile
+import org.json.JSONArray
 import java.io.BufferedOutputStream
 
 class FileInterface(private val path: String) {
@@ -49,13 +50,13 @@ class FileInterface(private val path: String) {
     @JavascriptInterface
     fun list(): String = runCatching {
         val names = suFile.list() ?: emptyArray()
-        org.json.JSONArray(names.toList()).toString()
+        JSONArray(names.toList()).toString()
     }.getOrElse { "[]" }
 
     @JavascriptInterface
     fun listFiles(): String = runCatching {
         val paths = suFile.listFiles()?.map { it.absolutePath } ?: emptyList()
-        org.json.JSONArray(paths).toString()
+        JSONArray(paths).toString()
     }.getOrElse { "[]" }
 
     @JavascriptInterface
