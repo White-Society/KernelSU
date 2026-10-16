@@ -1,6 +1,8 @@
 package me.weishu.kernelsu.ui.screen.colorpalette
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,10 +35,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -52,9 +56,11 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesignServices
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pin
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Swipe
+import androidx.compose.material.icons.rounded.ToggleOn
 import androidx.compose.material.icons.rounded.ViewCarousel
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Icon
@@ -76,7 +82,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -88,6 +96,8 @@ import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.bottombar.useNavigationRail
 import me.weishu.kernelsu.ui.component.material.ExpressiveScaffold
 import me.weishu.kernelsu.ui.component.material.ExpressiveToggleButton
+import me.weishu.kernelsu.MainActivityKowsu
+import me.weishu.kernelsu.MainActivityOfficial
 import me.weishu.kernelsu.ui.component.material.SegmentedColumn
 import me.weishu.kernelsu.ui.component.material.SegmentedDropdownItem
 import me.weishu.kernelsu.ui.component.material.SegmentedSwitchItem
@@ -111,6 +121,7 @@ fun ColorPaletteScreenMaterial(
     val colorStyle = state.currentPaletteStyle
     val colorSpec = state.currentColorSpec
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     ExpressiveScaffold(
         topBar = {
@@ -145,6 +156,8 @@ fun ColorPaletteScreenMaterial(
                     isAmoled = isAmoled,
                     paletteStyle = colorStyle,
                     colorSpec = colorSpec,
+                    officialIcon = uiState.enableOfficialLauncher,
+                    classicUi = uiState.classicUi,
                 )
             }
 
@@ -239,6 +252,58 @@ fun ColorPaletteScreenMaterial(
             }
 
             item {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                ) {
+                    val launcherOptions = listOf(false, true)
+                    launcherOptions.forEachIndexed { index, isOfficial ->
+                        ExpressiveToggleButton(
+                            checked = uiState.enableOfficialLauncher == isOfficial,
+                            onCheckedChange = { enabled ->
+                                if (enabled) {
+                                    actions.onSetEnableOfficialLauncher(isOfficial)
+                                    val pm = context.packageManager
+                                    val kowsuComponent = ComponentName(context, MainActivityKowsu::class.java)
+                                    val officialComponent = ComponentName(context, MainActivityOfficial::class.java)
+                                    val (enableComp, disableComp) = if (isOfficial) officialComponent to kowsuComponent else kowsuComponent to officialComponent
+
+                                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                    pm.setComponentEnabledSetting(enableComp, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                                    pm.setComponentEnabledSetting(disableComp, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { role = Role.RadioButton },
+                            shapes = when (index) {
+                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                1 -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = if (isOfficial) R.drawable.ic_launcher_monochrome else R.drawable.ic_launcher_kowsu),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .wrapContentSize(unbounded = true)
+                                        .requiredSize(48.dp)
+                                )
+                                Text(if (isOfficial) stringResource(R.string.app_name_official) else stringResource(R.string.app_name))
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
                 SegmentedColumn(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     content = listOf(
@@ -263,6 +328,44 @@ fun ColorPaletteScreenMaterial(
                                 selectedIndex = specs.indexOf(colorSpec).coerceAtLeast(0),
                                 onItemSelected = { index ->
                                     actions.onSetColorSpec(specs[index].name)
+                                }
+                            )
+                        },
+                    )
+                )
+            }
+
+            item {
+                SegmentedColumn(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    content = listOf(
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.Home,
+                                title = stringResource(R.string.settings_classic_home_ui),
+                                checked = uiState.classicUi,
+                                onCheckedChange = {
+                                    actions.onSetClassicUi(it)
+                                }
+                            )
+                        },
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.ToggleOn,
+                                title = stringResource(R.string.settings_switch_icon),
+                                checked = uiState.showSwitchIcon,
+                                onCheckedChange = {
+                                    actions.onSetShowSwitchIcon(it)
+                                }
+                            )
+                        },
+                        {
+                            SegmentedSwitchItem(
+                                icon = Icons.Rounded.ViewCarousel,
+                                title = stringResource(R.string.settings_scroll_animation),
+                                checked = uiState.scrollAnimation,
+                                onCheckedChange = {
+                                    actions.onSetScrollAnimation(it)
                                 }
                             )
                         }
@@ -456,6 +559,8 @@ private fun ThemePreviewCard(
     isAmoled: Boolean = false,
     paletteStyle: PaletteStyle = PaletteStyle.TonalSpot,
     colorSpec: ColorSpec.SpecVersion = ColorSpec.SpecVersion.SPEC_2025,
+    officialIcon: Boolean = false,
+    classicUi: Boolean = false,
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.toFloat()
@@ -495,7 +600,7 @@ private fun ThemePreviewCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = stringResource(id = R.string.app_name),
+                            text = if (officialIcon) stringResource(R.string.app_name_official) else stringResource(R.string.app_name),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorScheme.onSurface
                         )
@@ -514,7 +619,7 @@ private fun ThemePreviewCard(
                             containerColor = colorScheme.secondaryContainer,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(40.dp),
+                                .height(if (classicUi) 64.dp else 40.dp),
                             shape = RoundedCornerShape(8.dp),
                             content = { }
                         )

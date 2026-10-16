@@ -5,7 +5,9 @@
     <string name="home_click_to_install">Нажмите, чтобы установить</string>
     <string name="home_working">Работает</string>
     <string name="home_working_version">Версия: %s</string>
+    <string name="home_superuser_count">Рут Права: %d</string>
     <!--Don't translate this string!-->
+    <string name="home_module_count">Модули: %d</string>
     <string name="home_unsupported">Не поддерживается</string>
     <string name="home_unsupported_reason">Теперь KernelSU поддерживает только ядра GKI, однако вы всё ещё можете пропатчить образ для GKI-устройств.</string>
     <string name="home_kernel">Версия ядра</string>
@@ -16,7 +18,7 @@
     <string name="selinux_status_enforcing">Принудительный</string>
     <string name="selinux_status_permissive">Разрешающий</string>
     <string name="selinux_status_unknown">Неизвестно</string>
-    <string name="superuser">Суперюзеры</string>
+    <string name="superuser">Рут Доступ</string>
     <!--Don't translate this string!-->
     <string name="module_failed_to_enable">Не удалось включить модуль %s</string>
     <string name="module_failed_to_disable">Не удалось отключить модуль %s</string>
@@ -28,8 +30,8 @@
     <string name="reboot">Перезагрузить</string>
     <string name="settings">Настройки</string>
     <string name="reboot_userspace">Мягкая перезагрузка</string>
-    <string name="reboot_recovery">Перезагрузить в Recovery</string>
-    <string name="reboot_bootloader">Перезагрузить в Bootloader</string>
+    <string name="reboot_recovery">Перезагрузить в Рекавери</string>
+    <string name="reboot_bootloader">Перезагрузить в Фастбут</string>
     <string name="reboot_download">Перезагрузить в Download</string>
     <string name="reboot_edl">Перезагрузить в EDL</string>
     <string name="about">О приложении</string>
@@ -140,7 +142,7 @@
     <string name="module_sort_enabled_first">Сначала включённые</string>
     <string name="module_install_prompt_with_name">Будут установлены следующие модули: %1$s</string>
     <string name="confirm">Подтвердить</string>
-    <string name="su_not_allowed">Не удалось предоставить права Суперпользователя к %s</string>
+    <string name="su_not_allowed">Не удалось предоставить рут доступ к %s</string>
     <string name="refresh_complete">Обновлено успешно</string>
     <string name="refresh_refresh">Обновление…</string>
     <string name="refresh_release">Отпустите чтобы обновить</string>

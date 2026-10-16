@@ -9,6 +9,10 @@ interface SettingsRepository {
     var keyColor: Int
     var colorStyle: String
     var colorSpec: String
+    var enableOfficialLauncher: Boolean
+    var classicUi: Boolean
+    var showSwitchIcon: Boolean
+    var scrollAnimation: Boolean
     var enablePredictiveBack: Boolean
     var enableSwipeDismiss: Boolean
     var pagerInterceptionMode: Int
@@ -60,6 +64,10 @@ interface SettingsRepository {
     suspend fun getShellSuAdbOnlyPersistValue(): Long?
     suspend fun getShellSuAdbOnlyValue(): Long?
     fun setShellSuAdbOnlyEnabled(enabled: Boolean): Boolean
+
+    suspend fun getAvcSpoofStatus(): String
+    fun isAvcSpoofEnabled(): Boolean
+    fun setAvcSpoofEnabled(enabled: Boolean): Boolean
 
     fun isDefaultUmountModules(): Boolean
     fun setDefaultUmountModules(enabled: Boolean): Boolean
