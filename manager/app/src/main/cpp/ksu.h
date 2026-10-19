@@ -6,11 +6,14 @@
 #define KERNELSU_KSU_H
 
 #include <cstdint>
+#include <string>
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <utility>
 
 #include "uapi/ksu.h"
+
+constexpr int KSU_GET_LKM_VARIANT = 20000;
 
 uint32_t get_kernel_uapi_version();
 
@@ -25,6 +28,8 @@ bool is_safe_mode();
 bool is_lkm_mode();
 
 bool is_lkm_bundled();
+
+std::string get_lkm_variant();
 
 bool is_late_load_mode();
 
@@ -52,6 +57,11 @@ bool is_kernel_umount_enabled();
 int set_selinux_hide_enabled(bool enabled);
 
 bool is_selinux_hide_enabled();
+
+// Avc spoof
+bool set_avc_spoof_enabled(bool enabled);
+
+bool is_avc_spoof_enabled();
 
 bool get_allow_list(struct ksu_new_get_allow_list_cmd *);
 
