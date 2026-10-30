@@ -24,7 +24,7 @@ object Natives {
     // 32336: new set_sepolicy ioctl
     // 32377: add set_init_pgrp ioctl
     // 32513: add uapi version
-    const val MINIMAL_SUPPORTED_KERNEL = 32513
+    const val MINIMAL_SUPPORTED_KERNEL = 32513 + 30 // KowSU commit around 30
 
     const val KERNEL_SU_DOMAIN = "u:r:ksu:s0"
 
@@ -45,6 +45,9 @@ object Natives {
         external get
 
     val isLkmBundled: Boolean
+        external get
+
+    val lkmVariant: String?
         external get
 
     val isLateLoadMode: Boolean
@@ -92,6 +95,15 @@ object Natives {
      */
     external fun isSelinuxHideEnabled(): Boolean
     external fun setSelinuxHideEnabled(enabled: Boolean): Int
+
+    /**
+     * Avc spoof can be enabled/disabled.
+     *  0: disabled
+     *  1: enabled
+     *  negative : error
+     */
+    external fun isAvcSpoofEnabled(): Boolean
+    external fun setAvcSpoofEnabled(enabled: Boolean): Boolean
 
     /**
      * Get the user name for the uid.

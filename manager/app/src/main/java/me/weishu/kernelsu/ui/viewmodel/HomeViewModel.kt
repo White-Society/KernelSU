@@ -1,5 +1,7 @@
 package me.weishu.kernelsu.ui.viewmodel
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import android.system.Os
 import androidx.lifecycle.ViewModel
@@ -15,6 +17,7 @@ import me.weishu.kernelsu.BuildConfig
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.data.repository.SettingsRepository
 import me.weishu.kernelsu.data.repository.SettingsRepositoryImpl
+import me.weishu.kernelsu.R
 import me.weishu.kernelsu.getKernelVersion
 import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.screen.home.HomeUiState
@@ -30,8 +33,25 @@ class HomeViewModel(
     private val settingsRepo: SettingsRepository = SettingsRepositoryImpl()
 ) : ViewModel() {
 
+    private val prefs = ksuApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            "enable_official_launcher" -> _uiState.update { it.copy(appName = buildState().appName) }
+            "classic_ui" -> _uiState.update { it.copy(classicUi = buildState().classicUi) }
+        }
+    }
+
     private val _uiState = MutableStateFlow(buildState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    override fun onCleared() {
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        super.onCleared()
+    }
 
     fun refresh() {
         viewModelScope.launch {
@@ -45,20 +65,29 @@ class HomeViewModel(
     }
 
     private fun buildState(): HomeUiState {
+        val prefs = ksuApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val isOfficial = prefs.getBoolean("enable_official_launcher", false)
+        val classicUi = prefs.getBoolean("classic_ui", false)
+        val appName = if (isOfficial) ksuApp.getString(R.string.app_name_official) else ksuApp.getString(R.string.app_name)
         val kernelVersion = getKernelVersion()
         val isManager = Natives.isManager
         val ksuVersion = if (isManager) Natives.version else null
         val kernelUAPIVersion = if (isManager) Natives.kernelUAPIVersion else null
         val managerUAPIVersion = Natives.managerUAPIVersion
         val lkmMode = ksuVersion?.let { if (kernelVersion.isGKI()) Natives.isLkmMode else null }
+        val isLkmBundled = lkmMode == true && Natives.isLkmBundled
+        val lkmVariant = if (lkmMode == true && !isLkmBundled) Natives.lkmVariant else null
         val isRootAvailable = rootAvailable()
         val managerVersion = getManagerVersion(ksuApp)
 
         return HomeUiState(
+            appName = appName,
+            classicUi = classicUi,
             kernelVersion = kernelVersion,
             ksuVersion = ksuVersion,
             lkmMode = lkmMode,
-            isLkmBundled = lkmMode == true && Natives.isLkmBundled,
+            isLkmBundled = isLkmBundled,
+            lkmVariant = lkmVariant,
             isManager = isManager,
             isManagerPrBuild = BuildConfig.IS_PR_BUILD,
             isKernelPrBuild = Natives.isPrBuild,
