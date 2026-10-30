@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 const val TAG = "KsuIO"
 
 object KsuIO {
+    private const val KSU_IO_VERSION = 1
     private const val MAX_OPEN_STREAMS = 50
 
     internal val openInputStreams = ConcurrentHashMap<String, ManagedInputStream>()
@@ -15,6 +16,9 @@ object KsuIO {
     private val fileOutputStream = FileOutputStreamInterface()
     private val fileInputStream = FileInputStreamInterface()
     private val randomAccessFile = RandomAccessFileInterface()
+
+    @JavascriptInterface
+    fun version(): Int = KSU_IO_VERSION
 
     @JavascriptInterface
     fun File(path: String): FileInterface = FileInterface(path)

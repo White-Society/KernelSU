@@ -70,9 +70,9 @@ interface PackageInfoPerUid extends PackagesInfo {
 }
 
 interface KsuPm {
-    /** Falls back to the top-level `listPackages` when the new pm interface is unavailable. */
+    readonly support: boolean;
+    readonly version: number;
     listPackages(type: string): string[];
-    /** Falls back to the top-level `getPackagesInfo` when the new pm interface is unavailable. */
     getPackagesInfo(packages: string[]): Array<PackageInfoPerUid | PackageInfoError>;
 }
 
@@ -170,6 +170,7 @@ interface RandomAccessFileInstance {
 
 interface KsuIO {
     readonly support: boolean;
+    readonly version: number;
     File(path: string): FileInstance;
     FileInputStream(): FileInputStreamInstance;
     FileOutputStream(): FileOutputStreamInstance;

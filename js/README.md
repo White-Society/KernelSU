@@ -145,9 +145,17 @@ const packages = pm.listPackages('user');
 const infos = pm.getPackagesInfo(['com.android.settings', 'com.android.shell']);
 ```
 
+#### pm.support
+
+`boolean` — whether the multi-user pm interface is available in the current environment. Evaluated once when the module loads.
+
+#### pm.version
+
+`number` — the pm API version provided by the manager (Kotlin side) through the `ksu.pm` bridge. `0` when the bridge is unavailable.
+
 #### pm.listPackages
 
-List installed package names, deduplicated across users. Falls back to the deprecated top-level `listPackages` when the multi-user interface is unavailable.
+List installed package names, deduplicated across users.
 
 Returns an array of unique package names.
 
@@ -167,7 +175,7 @@ img.src = "ksu://icon/" + packageName;
 
 #### pm.getPackagesInfo
 
-Get information for a list of packages, one entry per uid. When the multi-user interface is unavailable it falls back to the deprecated top-level `getPackagesInfo` and normalizes the result: `userId` is derived as `Math.floor(uid / 100000)` (entries may only be one per package, not one per uid).
+Get information for a list of packages, one entry per uid.
 
 Returns a flat array: one entry per uid for each resolved package, following the input package order, with uids ascending within a package. If a package is missing or inaccessible, the corresponding entry contains `packageName` and `error` instead.
 
@@ -209,7 +217,11 @@ import { io } from 'kernelsu';
 
 #### io.support
 
-`boolean` — whether the advanced file interface is available in the current environment. This is a live check of the `ksu.io` bridge, safe to read at any time.
+`boolean` — whether the advanced file interface is available in the current environment. Evaluated once when the module loads.
+
+#### io.version
+
+`number` — the io API version provided by the manager (Kotlin side) through the `ksu.io` bridge. `0` when the bridge is unavailable.
 
 ```javascript
 import { io, toast } from 'kernelsu';
